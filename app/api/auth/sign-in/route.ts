@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prismadb } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,36 +40,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find or create user in database
-    let user = await prismadb.users.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (!user) {
-      // Create new user with admin role
-      user = await prismadb.users.create({
-        data: {
-          email: email.toLowerCase(),
-          name: email.split("@")[0],
-          role: "admin",
-          userStatus: "ACTIVE",
-          emailVerified: new Date(),
-        },
-      });
-    } else {
-      // Ensure existing user has admin role and is active
-      if (user.role !== "admin" || user.userStatus !== "ACTIVE") {
-        user = await prismadb.users.update({
-          where: { id: user.id },
-          data: { role: "admin", userStatus: "ACTIVE" },
-        });
-      }
-    }
-
+    // Create a user object for the session
+    const userId = `admin-${emailIndex}-${email.toLowerCase()}`;
+    
     // Create session using better-auth API
     const session = await auth.api.createSession({
       body: {
-        userId: user.id,
+        userId: userId,
+        email: email.toLowerCase(),
+        name: email.split("@")[0],
+        role: "admin",
       },
       headers: request.headers,
     });
@@ -84,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      user: { email: user.email, id: user.id },
+      user: { email: email.toLowerCase(), id: userId },
     });
 
     // Set session cookie
