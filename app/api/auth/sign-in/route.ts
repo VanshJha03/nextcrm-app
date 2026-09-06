@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createInternalAdapter } from "better-auth/db";
-import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prismadb } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -46,11 +45,11 @@ export async function POST(request: NextRequest) {
     // Create a user object for the session
     const userId = `admin-${emailIndex}-${email.toLowerCase()}`;
     
-    // Create internal adapter to manually create session
+    // Create internal adapter using the database adapter from auth config
     const adapter = createInternalAdapter(
-      prismaAdapter(prismadb, { provider: "postgresql" }),
+      auth.options.database as any,
       {
-        options: {},
+        options: auth.options,
         logger: console,
         hooks: [],
         generateId: () => crypto.randomUUID(),
